@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "engutils"
+version = "0.1.0"
+description = "Engineering utilities: unit conversion, material properties, beam/fluid/thermal calculations"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Daniel" }]
+keywords = ["engineering", "units", "beams", "fluids", "heat-transfer"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
