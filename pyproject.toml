@@ -3,14 +3,14 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "engutils"
+name = "numethods"
 version = "0.1.0"
-description = "Engineering utilities: unit conversion, material properties, beam/fluid/thermal calculations"
+description = "Pure-Python numerical methods: root finding, linear algebra, ODEs, integration, interpolation, optimization"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Daniel" }]
-keywords = ["engineering", "units", "beams", "fluids", "heat-transfer"]
+keywords = ["numerical-methods", "scientific-computing", "ode", "quadrature"]
 
 [project.optional-dependencies]
 test = ["pytest>=7"]

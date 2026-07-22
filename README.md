@@ -1,6 +1,6 @@
-# engutils
+# numethods
 
-Engineering utilities toolkit, SI units throughout. Pure Python, no dependencies.
+Pure-Python numerical methods toolkit. No dependencies (pytest only for tests).
 
 ## Install
 
@@ -13,35 +13,30 @@ pip install -e ".[test]"  # with pytest
 
 | Module | Contents |
 |---|---|
-| `units` | `convert(v, "psi", "kPa")` across length/mass/force/pressure/energy/power/volume/flow/velocity/area/angle/time; `convert_temperature` for C/F/K/R |
-| `materials` | property database (steel, aluminum, titanium, copper, plastics, ...): density, E, yield, Poisson, k, cp, alpha + derived G, K, diffusivity |
-| `beams` | section properties (rectangle, circle, tube, I-beam), classic load cases (cantilever, simply supported, fixed-fixed), bending stress, Euler buckling, safety factor |
-| `fluids` | Reynolds, friction factor (Swamee-Jain), Darcy-Weisbach pressure drop, Bernoulli, drag, orifice flow, pump power |
-| `thermo` | conduction (plane/cylindrical), convection + Nusselt correlations, radiation, LMTD, effectiveness-NTU, ideal gas, thermal expansion |
+| `roots` | bisection, newton, secant, fixed_point, brent |
+| `linalg` | gauss_solve, lu_decompose/lu_solve, jacobi, gauss_seidel, determinant, matmul, norms |
+| `ode` | euler, heun, rk4, adaptive rkf45, solve_ivp dispatcher |
+| `integrate` | trapezoid, simpson, romberg, gauss_legendre, adaptive_simpson, differentiate |
+| `interpolate` | lagrange, newton_divided, CubicSpline, polyfit, linear_regression |
+| `optimize` | golden_section, gradient_descent, nelder_mead, minimize_scalar |
 
 ## Quick start
 
 ```python
-from engutils import units, materials, beams, fluids
+from numethods import roots, ode, integrate
 
-# unit conversion
-stress_mpa = units.convert(36_000, "psi", "MPa")
+# root of x^2 = 2
+r = roots.brent(lambda x: x*x - 2, 0, 2)
 
-# material lookup
-al = materials.get("aluminum_6061")
-print(al.E, al.yield_strength, al.shear_modulus)
+# integrate sin from 0 to pi
+import math
+area = integrate.adaptive_simpson(math.sin, 0, math.pi)
 
-# beam check: 2 m simply supported steel beam, 10 kN center load
-s = beams.rectangle(0.05, 0.10)
-r = beams.simply_supported_center_load(10e3, 2.0, 200e9, s.I)
-sigma = beams.bending_stress(r["max_moment"], s)
-sf = beams.safety_factor(materials.get("steel_a36").yield_strength, sigma)
-
-# pipe pressure drop: water, 2 m/s, 20 m of 50 mm pipe
-dp = fluids.pressure_drop_pipe(998.2, 2.0, 20, 0.05, 1.002e-3, roughness=4.5e-5)
+# solve y' = -y, y(0) = 1
+ts, ys = ode.solve_ivp(lambda t, y: -y, (0, 5), 1.0, method="rkf45", tol=1e-9)
 ```
 
-Material data are typical room-temperature values — verify against supplier datasheets for real design work.
+ODE solvers accept vector state as plain lists, e.g. `f = lambda t, s: [s[1], -s[0]]` for a harmonic oscillator.
 
 ## Tests
 
