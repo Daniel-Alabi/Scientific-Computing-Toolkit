@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radix Bench</title>
+<style>body{margin:0}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef1ee;
+    --surface: #f8faf8;
+    --surface-2: #e2e7e3;
+    --ink: #1a2229;
+    --ink-2: #4c5a63;
+    --ink-3: #7d8a92;
+    --line: #cfd7d2;
+    --accent: #1f7a8c;
+    --accent-ink: #ffffff;
+    --accent-soft: #d6e9ed;
+    --bad: #b8432f;
+    --bad-soft: #f5ddd8;
+    --bit-on: #1f7a8c;
+    --bit-off: #dfe5e1;
+    --focus: #1f7a8c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131a1f;
+      --surface: #1b242a;
+      --surface-2: #232e35;
+      --ink: #e6ecee;
+      --ink-2: #a9b6bc;
+      --ink-3: #6f7d85;
+      --line: #2f3c44;
+      --accent: #4fb3c6;
+      --accent-ink: #0c1418;
+      --accent-soft: #1d3a42;
+      --bad: #e07a66;
+      --bad-soft: #3d2420;
+      --bit-on: #4fb3c6;
+      --bit-off: #2a353c;
+      --focus: #4fb3c6;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131a1f;
+    --surface: #1b242a;
+    --surface-2: #232e35;
+    --ink: #e6ecee;
+    --ink-2: #a9b6bc;
+    --ink-3: #6f7d85;
+    --line: #2f3c44;
+    --accent: #4fb3c6;
+    --accent-ink: #0c1418;
+    --accent-soft: #1d3a42;
+    --bad: #e07a66;
+    --bad-soft: #3d2420;
+    --bit-on: #4fb3c6;
+    --bit-off: #2a353c;
+    --focus: #4fb3c6;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    padding-inline: 20px;
+    padding-block: 28px 48px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 22px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+  h1 {
+    font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
+    font-weight: 700; font-size: 30px; letter-spacing: -0.01em;
+    margin: 0; line-height: 1.1; text-wrap: balance;
+  }
+  header p { margin: 0; color: var(--ink-2); max-width: 46ch; }
+
+  .mono { font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .label { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+
+  .bases { display: grid; gap: 10px; }
+  .base {
+    display: grid; grid-template-columns: 120px 1fr auto; align-items: center; gap: 4px 16px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .base.bad { border-color: var(--bad); }
+  .base .head { display: grid; gap: 2px; }
+  .base .name { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 17px; line-height: 1.1; }
+  .base .radix { color: var(--ink-3); font-size: 12.5px; }
+  .base input {
+    width: 100%; font-size: 22px; padding: 6px 2px; border: 0; border-bottom: 2px solid var(--line);
+    background: transparent; color: var(--ink); outline: none; letter-spacing: 0.02em;
+    min-width: 0;
+  }
+  .base input:focus { border-bottom-color: var(--focus); }
+  .base.bad input { border-bottom-color: var(--bad); color: var(--bad); }
+  .base .grouped { grid-column: 2; font-size: 13px; color: var(--ink-2); word-break: break-all; min-height: 1.4em; }
+  .base.bad .grouped { color: var(--bad); }
+  .copy {
+    grid-row: 1 / span 2; align-self: center;
+    font: 500 12.5px "IBM Plex Sans", sans-serif; letter-spacing: 0.04em;
+    padding: 7px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2);
+    color: var(--ink-2); cursor: pointer;
+  }
+  .copy:hover { color: var(--ink); border-color: var(--ink-3); }
+  .copy:focus-visible, .base input:focus-visible, .width button:focus-visible, .bit:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .copy.done { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 16px; display: grid; gap: 14px; }
+  .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+  .panel-head h2 { font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 16px; margin: 0; }
+  .width { display: flex; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 7px; }
+  .width button {
+    font: 500 13px "IBM Plex Mono", monospace; padding: 4px 10px; border: 0; border-radius: 5px;
+    background: transparent; color: var(--ink-2); cursor: pointer;
+  }
+  .width button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+  .bits { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+  .byte { display: flex; gap: 3px; }
+  .bit {
+    width: 24px; height: 30px; border-radius: 4px; border: 0; padding: 0; cursor: pointer;
+    background: var(--bit-off); color: var(--ink-2); font: 500 13px "IBM Plex Mono", monospace;
+    display: grid; place-items: center; position: relative;
+  }
+  .bit.on { background: var(--bit-on); color: var(--accent-ink); }
+  .bit.msb::after { content: ""; position: absolute; top: -5px; left: 0; right: 0; height: 2px; background: var(--ink-3); border-radius: 1px; }
+  .bitnote { font-size: 12.5px; color: var(--ink-3); }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 20px; }
+  .fact { display: grid; gap: 2px; min-width: 0; }
+  .fact .val { font-size: 15px; word-break: break-all; }
+  .fact .val.err { color: var(--bad); }
+
+  .hint { color: var(--ink-3); font-size: 13px; margin: 0; }
+  .hint code { font-family: "IBM Plex Mono", monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  @media (max-width: 560px) {
+    .base { grid-template-columns: 1fr auto; }
+    .base .head { grid-column: 1 / -1; display: flex; gap: 8px; align-items: baseline; }
+    .base .grouped { grid-column: 1 / -1; }
+    .copy { grid-row: auto; }
+    .base input { font-size: 19px; }
+    .bit { width: 20px; height: 27px; font-size: 12px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .bit { transition: background-color 120ms; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Radix Bench</h1>
+    <p>Type into any base and the other three follow. Prefixes like <span class="mono">0x</span>, <span class="mono">0b</span>, <span class="mono">0o</span>, spaces and underscores are ignored. Any size integer, negatives included.</p>
+  </header>
+
+  <section class="bases" id="bases"></section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Bit view</h2>
+      <div class="width" id="width" role="group" aria-label="Word width"></div>
+    </div>
+    <div class="bits" id="bits"></div>
+    <div class="bitnote" id="bitnote"></div>
+    <div class="facts" id="facts"></div>
+  </section>
+
+  <p class="hint">Two's complement and signed values use the selected width. Click a bit to flip it; that rewrites the value.</p>
+</div>
+
+<script>
+(function () {
+  const BASES = [
+    { key: 'bin', name: 'Binary', radix: 2,  prefix: '0b', group: 4, re: /^[01]+$/,         id: 'in-bin' },
+    { key: 'oct', name: 'Octal',  radix: 8,  prefix: '0o', group: 3, re: /^[0-7]+$/,        id: 'in-oct' },
+    { key: 'dec', name: 'Decimal',radix: 10, prefix: '',   group: 3, re: /^[0-9]+$/,        id: 'in-dec' },
+    { key: 'hex', name: 'Hex',    radix: 16, prefix: '0x', group: 2, re: /^[0-9a-f]+$/i,    id: 'in-hex' },
+  ];
+  const WIDTHS = ['auto', 8, 16, 32, 64];
+
+  let value = 3735928559n;   // 0xDEADBEEF, a sensible thing to open on
+  let width = 'auto';
+  let badKey = null;
+  const inputs = {}, rows = {}, grouped = {};
+
+  // ---------- parsing ----------
+  function parse(raw, base) {
+    let s = raw.trim().replace(/[\s_]/g, '');
+    let neg = false;
+    if (s.startsWith('-')) { neg = true; s = s.slice(1); }
+    else if (s.startsWith('+')) { s = s.slice(1); }
+    if (base.prefix && s.toLowerCase().startsWith(base.prefix)) s = s.slice(2);
+    if (s === '') return { ok: true, empty: true, value: 0n };
+    if (!base.re.test(s)) return { ok: false };
+    let n = 0n; const R = BigInt(base.radix);
+    for (const ch of s.toLowerCase()) n = n * R + BigInt(parseInt(ch, 16));
+    return { ok: true, value: neg ? -n : n };
+  }
+  function fmt(n, radix) {
+    const neg = n < 0n; const s = (neg ? -n : n).toString(radix).toUpperCase();
+    return (neg ? '-' : '') + s;
+  }
+  function groupDigits(s, size, joiner) {
+    const neg = s.startsWith('-'); if (neg) s = s.slice(1);
+    let out = [];
+    for (let i = s.length; i > 0; i -= size) out.unshift(s.slice(Math.max(0, i - size), i));
+    return (neg ? '-' : '') + out.join(joiner);
+  }
+  function bitLength(n) { return n === 0n ? 1 : (n < 0n ? -n : n).toString(2).length; }
+  function effectiveWidth() {
+    if (width !== 'auto') return width;
+    const need = bitLength(value) + (value < 0n ? 1 : 0);
+    return Math.max(8, Math.ceil(need / 8) * 8);
+  }
+
+  // ---------- build UI ----------
+  const basesEl = document.getElementById('bases');
+  BASES.forEach(b => {
+    const row = document.createElement('div'); row.className = 'base';
+    row.innerHTML = `
+      <div class="head"><div class="name">${b.name}</div><div class="radix mono">base ${b.radix}</div></div>
+      <input class="mono" id="${b.id}" spellcheck="false" autocomplete="off" inputmode="${b.radix === 10 ? 'numeric' : 'text'}" aria-label="${b.name} value">
+      <button class="copy" type="button" data-key="${b.key}">Copy</button>
+      <div class="grouped mono"></div>`;
+    basesEl.appendChild(row);
+    rows[b.key] = row;
+    inputs[b.key] = row.querySelector('input');
+    grouped[b.key] = row.querySelector('.grouped');
+    inputs[b.key].addEventListener('input', () => onInput(b));
+    row.querySelector('.copy').addEventListener('click', e => copy(b, e.currentTarget));
+  });
+
+  const widthEl = document.getElementById('width');
+  WIDTHS.forEach(w => {
+    const btn = document.createElement('button'); btn.type = 'button';
+    btn.textContent = w === 'auto' ? 'auto' : w + '-bit';
+    btn.dataset.w = w;
+    btn.addEventListener('click', () => { width = w; render(null); });
+    widthEl.appendChild(btn);
+  });
+
+  // ---------- events ----------
+  function onInput(b) {
+    const r = parse(inputs[b.key].value, b);
+    if (!r.ok) { badKey = b.key; rows[b.key].classList.add('bad'); grouped[b.key].textContent = 'Not a valid base-' + b.radix + ' number'; return; }
+    badKey = null; value = r.value; render(b.key);
+  }
+  function copy(b, btn) {
+    const text = (value < 0n ? '-' : '') + b.prefix + fmt(value < 0n ? -value : value, b.radix);
+    const done = () => { btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1200); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
+  }
+  function toggleBit(i) {
+    const W = effectiveWidth(); const mask = (1n << BigInt(W)) - 1n;
+    let u = value & mask;               // two's complement pattern at this width
+    u ^= (1n << BigInt(i));
+    // interpret back: if the value was negative (or the width is fixed and MSB set), keep signed reading
+    const msb = 1n << BigInt(W - 1);
+    const signed = (u & msb) ? u - (1n << BigInt(W)) : u;
+    value = (value < 0n) ? signed : u;
+    render(null);
+  }
+
+  // ---------- render ----------
+  function render(skipKey) {
+    BASES.forEach(b => {
+      rows[b.key].classList.remove('bad');
+      const s = fmt(value, b.radix);
+      if (b.key !== skipKey) inputs[b.key].value = s;
+      grouped[b.key].textContent = groupDigits(s, b.group, b.radix === 10 ? ',' : ' ');
+    });
+    widthEl.querySelectorAll('button').forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.w == width)));
+
+    const W = effectiveWidth();
+    const mask = (1n << BigInt(W)) - 1n;
+    const twos = value & mask;                       // pattern
+    const bitsStr = twos.toString(2).padStart(W, '0');
+    const fits = value >= 0n ? bitLength(value) <= W : bitLength(value) <= W - 1 || (value === -(1n << BigInt(W - 1)));
+
+    const bitsEl = document.getElementById('bits'); bitsEl.innerHTML = '';
+    if (W <= 128) {
+      for (let byteIdx = 0; byteIdx < W / 8; byteIdx++) {
+        const byte = document.createElement('div'); byte.className = 'byte';
+        for (let k = 0; k < 8; k++) {
+          const i = W - 1 - (byteIdx * 8 + k);         // bit index, MSB first
+          const on = bitsStr[byteIdx * 8 + k] === '1';
+          const bt = document.createElement('button'); bt.type = 'button';
+          bt.className = 'bit' + (on ? ' on' : '') + (i === W - 1 ? ' msb' : '');
+          bt.textContent = on ? '1' : '0';
+          bt.title = 'bit ' + i + (i === W - 1 ? ' (sign / MSB)' : '');
+          bt.setAttribute('aria-label', 'bit ' + i + ', ' + (on ? 'one' : 'zero'));
+          bt.addEventListener('click', () => toggleBit(i));
+          byte.appendChild(bt);
+        }
+        bitsEl.appendChild(byte);
+      }
+    } else {
+      const p = document.createElement('div'); p.className = 'mono bitnote'; p.textContent = groupDigits(bitsStr, 8, ' ');
+      bitsEl.appendChild(p);
+    }
+
+    const note = document.getElementById('bitnote');
+    note.textContent = W + '-bit word, MSB on the left' + (width === 'auto' ? ' (auto width, rounded up to whole bytes)' : '') +
+      (fits ? '' : ' — value does not fit; showing the low ' + W + ' bits');
+
+    const signedVal = (twos & (1n << BigInt(W - 1))) ? twos - (1n << BigInt(W)) : twos;
+    const popcount = bitsStr.split('1').length - 1;
+    const facts = [
+      ['Bits needed', bitLength(value) + (value < 0n ? ' + sign' : '')],
+      ['Bytes', Math.ceil(bitLength(value) / 8) + ''],
+      ['Two’s complement (' + W + '-bit)', '0x' + twos.toString(16).toUpperCase().padStart(W / 4, '0')],
+      ['Unsigned at ' + W + '-bit', twos.toString(10)],
+      ['Signed at ' + W + '-bit', signedVal.toString(10)],
+      ['Set bits', popcount + ' of ' + W],
+    ];
+    const factsEl = document.getElementById('facts'); factsEl.innerHTML = '';
+    facts.forEach(([k, v]) => {
+      const f = document.createElement('div'); f.className = 'fact';
+      const l = document.createElement('div'); l.className = 'label'; l.textContent = k;
+      const val = document.createElement('div'); val.className = 'val mono' + (!fits && /at \d+-bit|complement/.test(k) ? ' err' : ''); val.textContent = v;
+      f.append(l, val); factsEl.appendChild(f);
+    });
+  }
+
+  render(null);
+})();
+</script>
+</body>
+</html>
